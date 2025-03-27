@@ -9,7 +9,7 @@ else
 fi
 
 # Define tools to install
-TOOLS=("fzf" "ranger" "micro" "zsh" "git" "curl")
+TOOLS=("fzf" "ranger" "micro" "zsh" "curl" "btop")
 SELECTED_TOOLS=()
 
 # Detect shell rc
@@ -28,6 +28,27 @@ for tool in "${TOOLS[@]}"; do
         SELECTED_TOOLS+=("$tool")
     fi
 done
+
+# Optional: color aliases and prompt
+read -rp "Add color aliases and PS1 prompt to $SHELL_RC? [Y/n]: " confirm_colors
+confirm_colors=${confirm_colors,,}
+if [[ "$confirm_colors" == "y" || "$confirm_colors" == "" ]]; then
+    append_if_missing ""
+    append_if_missing "# Enable color support for ls and common commands"
+    append_if_missing "if [ -x /usr/bin/dircolors ]; then"
+    append_if_missing "  test -r ~/.dircolors && eval \"\$(dircolors -b ~/.dircolors)\" || eval \"\$(dircolors -b)\""
+    append_if_missing "  alias ls='ls --color=auto'"
+    append_if_missing "  alias dir='dir --color=auto'"
+    append_if_missing "  alias vdir='vdir --color=auto'"
+    append_if_missing "  alias grep='grep --color=auto'"
+    append_if_missing "  alias fgrep='fgrep --color=auto'"
+    append_if_missing "  alias egrep='egrep --color=auto'"
+    append_if_missing "fi"
+
+    append_if_missing ""
+    append_if_missing "# Custom PS1 prompt with colors"
+    append_if_missing "PS1='\\[\\e[0;32m\\]\\u@\\h \\[\\e[0;33m\\]\\w \\$\\[\\e[0m\\] '"
+fi
 
 # Detect OS and package manager
 if [ -f /etc/debian_version ]; then
@@ -65,26 +86,6 @@ if [ -f ~/.fzf.bash ]; then
 fi
 append_if_missing "export EDITOR='micro'"
 
-# Optional: color aliases and prompt
-read -rp "Add color aliases and PS1 prompt to $SHELL_RC? [Y/n]: " confirm_colors
-confirm_colors=${confirm_colors,,}
-if [[ "$confirm_colors" == "y" || "$confirm_colors" == "" ]]; then
-    append_if_missing ""
-    append_if_missing "# Enable color support for ls and common commands"
-    append_if_missing "if [ -x /usr/bin/dircolors ]; then"
-    append_if_missing "  test -r ~/.dircolors && eval \"\$(dircolors -b ~/.dircolors)\" || eval \"\$(dircolors -b)\""
-    append_if_missing "  alias ls='ls --color=auto'"
-    append_if_missing "  alias dir='dir --color=auto'"
-    append_if_missing "  alias vdir='vdir --color=auto'"
-    append_if_missing "  alias grep='grep --color=auto'"
-    append_if_missing "  alias fgrep='fgrep --color=auto'"
-    append_if_missing "  alias egrep='egrep --color=auto'"
-    append_if_missing "fi"
-
-    append_if_missing ""
-    append_if_missing "# Custom PS1 prompt with colors"
-    append_if_missing "PS1='\\[\\e[0;32m\\]\\u@\\h \\[\\e[0;33m\\]\\w \\$\\[\\e[0m\\] '"
-fi
 echo ""
 echo "✅ Setup complete. Restart your shell or run:"
 echo ""
