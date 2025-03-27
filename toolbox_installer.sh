@@ -2,90 +2,54 @@
 
 set -e
 
-### 1. Ensure gum is installed
-install_gum() {
-  echo "Gum is not installed. Installing gum..."
-  ARCH=$(uname -m)
-  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+# Detect shell rc
+SHELL_RC="$HOME/.bashrc"
+[[ $SHELL = */zsh ]] && SHELL_RC="$HOME/.zshrc"
 
-  case $ARCH in
-    x86_64) ARCH="amd64" ;;
-    aarch64 | arm64) ARCH="arm64" ;;
-    *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-  esac
+# Select packages
+SELECTED=$(gum choose --no-limit "fzf" "ranger" "micro" "zsh" "git" "curl" "skip" \
+    --header="Select tools to install:")
 
-  VERSION=$(curl -s https://api.github.com/repos/charmbracelet/gum/releases/latest | grep tag_name | cut -d '"' -f 4)
-  if [ -z "$VERSION" ]; then
-    echo "Failed to fetch the latest gum version."
+PACKAGES=()
+for tool in $SELECTED; do
+    [[ "$tool" != "skip" ]] && PACKAGES+=("$tool")
+done
+
+# Detect OS + install selected packages
+if [ -f /etc/debian_version ]; then
+    sudo apt update
+    for pkg in "${PACKAGES[@]}"; do
+        if ! command -v "$pkg" &>/dev/null; then
+            echo "Installing $pkg..."
+            sudo apt install -y "$pkg"
+        fi
+    done
+elif [ -f /etc/SuSE-release ]; then
+    sudo zypper refresh
+    for pkg in "${PACKAGES[@]}"; do
+        sudo zypper install -y "$pkg"
+    done
+else
+    echo "Unsupported OS."
     exit 1
-  fi
+fi
 
-  URL="https://github.com/charmbracelet/gum/releases/download/${VERSION}/gum_${VERSION#v}_${OS}_${ARCH}.tar.gz"
+# Aliases
+if gum confirm "Do you want to alias ssh='kitten ssh'?"; then
+    grep -qxF "alias ssh='kitten ssh'" "$SHELL_RC" || echo "alias ssh='kitten ssh'" >> "$SHELL_RC"
+fi
 
-  echo "Downloading gum from $URL..."
-  curl -L "$URL" -o gum.tar.gz
-  mkdir -p gum-install
-  tar -xzf gum.tar.gz -C gum-install
-  sudo mv gum-install/gum /usr/local/bin/
-  rm -rf gum.tar.gz gum-install
+if gum confirm "Add syntax highlighting and fzf setup to $SHELL_RC?"; then
+    echo "[ -f ~/.fzf.bash ] && source ~/.fzf.bash" >> "$SHELL_RC"
+    echo "alias ll='ls --color=auto -alF'" >> "$SHELL_RC"
+    echo "export EDITOR='micro'" >> "$SHELL_RC"
+fi
 
-  if ! command -v gum &> /dev/null; then
-    echo "Failed to install gum."
-    exit 1
-  fi
+gum format --theme=dark <<EOF
 
-  echo "Gum installed successfully!"
-}
+# Done!
+Your shell has been configured. Restart your shell or run:
 
-### 2. Install selected tools
-install_micro() {
-  echo "Installing Micro..."
-  if [[ "$OSTYPE" == "darwin"* ]]; then
-    brew install micro
-  else
-    sudo apt update && sudo apt install -y micro
-  fi
-}
+\`source $SHELL_RC\`
 
-install_ranger() {
-  echo "Installing Ranger..."
-  sudo apt update && sudo apt install -y ranger
-}
-
-install_ohmyzsh() {
-  echo "Installing Oh My Zsh..."
-  if ! command -v zsh &> /dev/null; then
-    sudo apt update && sudo apt install -y zsh
-  fi
-  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-}
-
-### 3. Show menu and execute selections
-main_menu() {
-  choices=$(gum choose --no-limit --cursor ">" --header "Select tools to install:" micro ranger oh-my-zsh exit)
-
-  for choice in $choices; do
-    case $choice in
-      micro)
-        install_micro
-        ;;
-      ranger)
-        install_ranger
-        ;;
-      oh-my-zsh)
-        install_ohmyzsh
-        ;;
-      exit)
-        echo "Exiting installer."
-        exit 0
-        ;;
-      *)
-        echo "Unknown choice: $choice"
-        ;;
-    esac
-  done
-}
-
-### Run
-install_gum_if_needed
-main_menu
+EOF
