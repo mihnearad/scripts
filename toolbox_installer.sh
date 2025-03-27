@@ -1,71 +1,75 @@
 #!/bin/bash
 set -e
 
+# Define tools to install
+TOOLS=("fzf" "ranger" "micro" "zsh" "git" "curl")
+SELECTED_TOOLS=()
+
 # Detect shell rc
 SHELL_RC="$HOME/.bashrc"
 [[ $SHELL = */zsh ]] && SHELL_RC="$HOME/.zshrc"
 
+echo "== Shell Toolbox Installer =="
 
-# Check if gum is installed
-if ! command -v gum &>/dev/null; then
-  echo "gum is not installed. Installing gum..."
-
-  if [ -f /etc/debian_version ]; then
-    sudo apt update
-    sudo apt install -y curl gnupg
-    echo "deb [trusted=yes] https://apt.charm.sh/ stable main" | sudo tee /etc/apt/sources.list.d/charm.list
-    curl -fsSL https://github.com/charmbracelet/gum/releases/latest/download/gum_0.13.0_amd64.deb -o /tmp/gum.deb
-    sudo apt install -y /tmp/gum.deb
-  else
-    echo "Your OS is not supported for auto gum install. Please install gum manually from:"
-    echo "https://github.com/charmbracelet/gum#installation"
-    exit 1
-  fi
-fi
-# Select packages
-SELECTED=$(gum choose --no-limit "fzf" "ranger" "micro" "zsh" "git" "curl" "skip" \
-    --header="Select tools to install:")
-
-PACKAGES=()
-for tool in $SELECTED; do
-    [[ "$tool" != "skip" ]] && PACKAGES+=("$tool")
+# Tool selection
+echo ""
+echo "Select tools to install (Y/n):"
+for tool in "${TOOLS[@]}"; do
+    read -rp "Install $tool? [Y/n]: " yn
+    yn=${yn,,} # to lowercase
+    if [[ "$yn" == "y" || "$yn" == "" ]]; then
+        SELECTED_TOOLS+=("$tool")
+    fi
 done
 
-# Detect OS + install selected packages
+# Detect OS and package manager
 if [ -f /etc/debian_version ]; then
+    OS="debian"
+    PACKAGE_MANAGER="apt"
     sudo apt update
-    for pkg in "${PACKAGES[@]}"; do
-        if ! command -v "$pkg" &>/dev/null; then
-            echo "Installing $pkg..."
-            sudo apt install -y "$pkg"
-        fi
-    done
-elif [ -f /etc/SuSE-release ]; then
+elif grep -qi suse /etc/os-release 2>/dev/null; then
+    OS="suse"
+    PACKAGE_MANAGER="zypper"
     sudo zypper refresh
-    for pkg in "${PACKAGES[@]}"; do
-        sudo zypper install -y "$pkg"
-    done
 else
-    echo "Unsupported OS."
+    echo "Unsupported OS"
     exit 1
 fi
 
-# Aliases
-if gum confirm "Do you want to alias ssh='kitten ssh'?"; then
-    grep -qxF "alias ssh='kitten ssh'" "$SHELL_RC" || echo "alias ssh='kitten ssh'" >> "$SHELL_RC"
+# Install selected tools
+for pkg in "${SELECTED_TOOLS[@]}"; do
+    if ! command -v "$pkg" &>/dev/null; then
+        echo "Installing $pkg..."
+        sudo "$PACKAGE_MANAGER" install -y "$pkg"
+    else
+        echo "$pkg already installed"
+    fi
+done
+
+# Function to append to shell config if not already there
+append_if_missing() {
+    local LINE="$1"
+    grep -qxF "$LINE" "$SHELL_RC" || echo "$LINE" >> "$SHELL_RC"
+}
+
+# Alias kitten ssh
+read -rp "Alias ssh='kitten ssh'? [Y/n]: " confirm_ssh
+confirm_ssh=${confirm_ssh,,}
+if [[ "$confirm_ssh" == "y" || "$confirm_ssh" == "" ]]; then
+    append_if_missing "alias ssh='kitten ssh'"
 fi
 
-if gum confirm "Add syntax highlighting and fzf setup to $SHELL_RC?"; then
-    echo "[ -f ~/.fzf.bash ] && source ~/.fzf.bash" >> "$SHELL_RC"
-    echo "alias ll='ls --color=auto -alF'" >> "$SHELL_RC"
-    echo "export EDITOR='micro'" >> "$SHELL_RC"
+# FZF config + color aliases
+read -rp "Add syntax highlighting and fzf setup to $SHELL_RC? [Y/n]: " confirm_fzf
+confirm_fzf=${confirm_fzf,,}
+if [[ "$confirm_fzf" == "y" || "$confirm_fzf" == "" ]]; then
+    append_if_missing "[ -f ~/.fzf.bash ] && source ~/.fzf.bash"
+    append_if_missing "alias ll='ls --color=auto -alF'"
+    append_if_missing "export EDITOR='micro'"
 fi
 
-gum format --theme=dark <<EOF
-
-# Done!
-Your shell has been configured. Restart your shell or run:
-
-\`source $SHELL_RC\`
-
-EOF
+echo ""
+echo "✅ Setup complete. Restart your shell or run:"
+echo ""
+echo "  source $SHELL_RC"
+echo ""
