@@ -1,0 +1,76 @@
+#!/bin/bash
+
+set -e
+
+### 1. Ensure gum is installed
+install_gum_if_needed() {
+  if ! command -v gum &> /dev/null; then
+    echo "gum is not installed. Installing gum..."
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+      curl -fsSL https://github.com/charmbracelet/gum/releases/latest/download/gum_0.13.0_amd64.deb -o gum.deb
+      sudo dpkg -i gum.deb && rm gum.deb
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+      if ! command -v brew &> /dev/null; then
+        echo "Homebrew not found. Installing Homebrew..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      fi
+      brew install gum
+    else
+      echo "Unsupported OS. Please install gum manually: https://github.com/charmbracelet/gum"
+      exit 1
+    fi
+  fi
+}
+
+### 2. Install selected tools
+install_micro() {
+  echo "Installing Micro..."
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    brew install micro
+  else
+    sudo apt update && sudo apt install -y micro
+  fi
+}
+
+install_ranger() {
+  echo "Installing Ranger..."
+  sudo apt update && sudo apt install -y ranger
+}
+
+install_ohmyzsh() {
+  echo "Installing Oh My Zsh..."
+  if ! command -v zsh &> /dev/null; then
+    sudo apt update && sudo apt install -y zsh
+  fi
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+}
+
+### 3. Show menu and execute selections
+main_menu() {
+  choices=$(gum choose --no-limit --cursor ">" --header "Select tools to install:" micro ranger oh-my-zsh exit)
+
+  for choice in $choices; do
+    case $choice in
+      micro)
+        install_micro
+        ;;
+      ranger)
+        install_ranger
+        ;;
+      oh-my-zsh)
+        install_ohmyzsh
+        ;;
+      exit)
+        echo "Exiting installer."
+        exit 0
+        ;;
+      *)
+        echo "Unknown choice: $choice"
+        ;;
+    esac
+  done
+}
+
+### Run
+install_gum_if_needed
+main_menu
