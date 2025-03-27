@@ -5,6 +5,7 @@ set -e
 SHELL_RC="$HOME/.bashrc"
 [[ $SHELL = */zsh ]] && SHELL_RC="$HOME/.zshrc"
 
+
 # Check if gum is installed
 if ! command -v gum &>/dev/null; then
   echo "gum is not installed. Installing gum..."
