@@ -1,11 +1,26 @@
 #!/bin/bash
-
 set -e
 
 # Detect shell rc
 SHELL_RC="$HOME/.bashrc"
 [[ $SHELL = */zsh ]] && SHELL_RC="$HOME/.zshrc"
 
+# Check if gum is installed
+if ! command -v gum &>/dev/null; then
+  echo "gum is not installed. Installing gum..."
+
+  if [ -f /etc/debian_version ]; then
+    sudo apt update
+    sudo apt install -y curl gnupg
+    echo "deb [trusted=yes] https://apt.charm.sh/ stable main" | sudo tee /etc/apt/sources.list.d/charm.list
+    curl -fsSL https://github.com/charmbracelet/gum/releases/latest/download/gum_0.13.0_amd64.deb -o /tmp/gum.deb
+    sudo apt install -y /tmp/gum.deb
+  else
+    echo "Your OS is not supported for auto gum install. Please install gum manually from:"
+    echo "https://github.com/charmbracelet/gum#installation"
+    exit 1
+  fi
+fi
 # Select packages
 SELECTED=$(gum choose --no-limit "fzf" "ranger" "micro" "zsh" "git" "curl" "skip" \
     --header="Select tools to install:")
