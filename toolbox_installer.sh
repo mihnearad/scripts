@@ -52,22 +52,32 @@ append_if_missing() {
     grep -qxF "$LINE" "$SHELL_RC" || echo "$LINE" >> "$SHELL_RC"
 }
 
-# Alias kitten ssh
-read -rp "Alias ssh='kitten ssh'? [Y/n]: " confirm_ssh
-confirm_ssh=${confirm_ssh,,}
-if [[ "$confirm_ssh" == "y" || "$confirm_ssh" == "" ]]; then
-    append_if_missing "alias ssh='kitten ssh'"
-fi
-
-# FZF config + color aliases
-read -rp "Add syntax highlighting and fzf setup to $SHELL_RC? [Y/n]: " confirm_fzf
-confirm_fzf=${confirm_fzf,,}
-if [[ "$confirm_fzf" == "y" || "$confirm_fzf" == "" ]]; then
+# Always add fzf integration if installed
+if [ -f ~/.fzf.bash ]; then
     append_if_missing "[ -f ~/.fzf.bash ] && source ~/.fzf.bash"
-    append_if_missing "alias ll='ls --color=auto -alF'"
-    append_if_missing "export EDITOR='micro'"
 fi
+append_if_missing "export EDITOR='micro'"
 
+# Optional: color aliases and prompt
+read -rp "Add color aliases and PS1 prompt to $SHELL_RC? [Y/n]: " confirm_colors
+confirm_colors=${confirm_colors,,}
+if [[ "$confirm_colors" == "y" || "$confirm_colors" == "" ]]; then
+    append_if_missing ""
+    append_if_missing "# Enable color support for ls and common commands"
+    append_if_missing "if [ -x /usr/bin/dircolors ]; then"
+    append_if_missing "  test -r ~/.dircolors && eval \"\$(dircolors -b ~/.dircolors)\" || eval \"\$(dircolors -b)\""
+    append_if_missing "  alias ls='ls --color=auto'"
+    append_if_missing "  alias dir='dir --color=auto'"
+    append_if_missing "  alias vdir='vdir --color=auto'"
+    append_if_missing "  alias grep='grep --color=auto'"
+    append_if_missing "  alias fgrep='fgrep --color=auto'"
+    append_if_missing "  alias egrep='egrep --color=auto'"
+    append_if_missing "fi"
+
+    append_if_missing ""
+    append_if_missing "# Custom PS1 prompt with colors"
+    append_if_missing "PS1='\\[\\e[0;32m\\]\\u@\\h \\[\\e[0;33m\\]\\w \\$\\[\\e[0m\\] '"
+fi
 echo ""
 echo "✅ Setup complete. Restart your shell or run:"
 echo ""
