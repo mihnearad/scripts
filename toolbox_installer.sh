@@ -1,5 +1,12 @@
-#!/bin/bash
+#/bin/bash
 set -e
+
+# Use only if not running as root
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+else
+    SUDO="sudo"
+fi
 
 # Define tools to install
 TOOLS=("fzf" "ranger" "micro" "zsh" "git" "curl")
@@ -26,11 +33,11 @@ done
 if [ -f /etc/debian_version ]; then
     OS="debian"
     PACKAGE_MANAGER="apt"
-    sudo apt update
+    $SUDO apt update
 elif grep -qi suse /etc/os-release 2>/dev/null; then
     OS="suse"
     PACKAGE_MANAGER="zypper"
-    sudo zypper refresh
+    $SUDO zypper refresh
 else
     echo "Unsupported OS"
     exit 1
@@ -40,7 +47,7 @@ fi
 for pkg in "${SELECTED_TOOLS[@]}"; do
     if ! command -v "$pkg" &>/dev/null; then
         echo "Installing $pkg..."
-        sudo "$PACKAGE_MANAGER" install -y "$pkg"
+        $SUDO "$PACKAGE_MANAGER" install -y "$pkg"
     else
         echo "$pkg already installed"
     fi
