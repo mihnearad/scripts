@@ -8,6 +8,12 @@ else
     SUDO="sudo"
 fi
 
+# 👉 Function must be defined BEFORE it's called
+append_if_missing() {
+    local LINE="$1"
+    grep -qxF "$LINE" "$SHELL_RC" || echo "$LINE" >> "$SHELL_RC"
+}
+
 # Define tools to install
 TOOLS=("fzf" "ranger" "micro" "zsh" "curl" "btop")
 SELECTED_TOOLS=()
@@ -74,11 +80,7 @@ for pkg in "${SELECTED_TOOLS[@]}"; do
     fi
 done
 
-# Function to append to shell config if not already there
-append_if_missing() {
-    local LINE="$1"
-    grep -qxF "$LINE" "$SHELL_RC" || echo "$LINE" >> "$SHELL_RC"
-}
+
 
 # Always add fzf integration if installed
 if [ -f ~/.fzf.bash ]; then
