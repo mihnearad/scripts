@@ -16,7 +16,7 @@ SELECTED_TOOLS=()
 SHELL_RC="$HOME/.bashrc"
 [[ $SHELL = */zsh ]] && SHELL_RC="$HOME/.zshrc"
 
-echo "== Shell Toolbox Installer =="
+echo "== Shell Tool Box Installer =="
 
 # Tool selection
 echo ""
